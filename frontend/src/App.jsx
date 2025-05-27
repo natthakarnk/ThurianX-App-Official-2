@@ -2,23 +2,29 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function WelcomeScreen({ onStart, lang, setLang }) {
-  const [showHint, setShowHint] = useState(() => {
-    // use sessionStorage so it persists while tab is open
-    return sessionStorage.getItem('thurianx-hint-shown') !== 'false';
-  });
+  const [showHint, setShowHint] = useState(() =>
+    sessionStorage.getItem('thurianx-hint-shown') !== 'false'
+  );
+  const [audioPlayed, setAudioPlayed] = useState(
+    sessionStorage.getItem('thurianx-audio-played') === 'true'
+  );
 
   const handleInteraction = useCallback(() => {
-    const audio = new Audio('/epic_ThurianX_app.mp3');
-    audio.volume = 0.5;
-    audio.play().catch((err) => {
-      console.warn('🎵 Cannot play audio:', err);
-    });
-    window.__thurianxAudio = audio;
-    document.removeEventListener('click', handleInteraction);
-    document.removeEventListener('touchstart', handleInteraction);
+    if (!audioPlayed) {
+      const audio = new Audio('/epic_ThurianX_app.mp3');
+      audio.volume = 0.5;
+      audio.play().catch((err) => {
+        console.warn('🎵 Cannot play audio:', err);
+      });
+      window.__thurianxAudio = audio;
+      setAudioPlayed(true);
+      sessionStorage.setItem('thurianx-audio-played', 'true');
+    }
     setShowHint(false);
     sessionStorage.setItem('thurianx-hint-shown', 'false');
-  }, []);
+    document.removeEventListener('click', handleInteraction);
+    document.removeEventListener('touchstart', handleInteraction);
+  }, [audioPlayed]);
 
   useEffect(() => {
     if (!showHint) return;
@@ -27,10 +33,6 @@ function WelcomeScreen({ onStart, lang, setLang }) {
     return () => {
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
-      if (window.__thurianxAudio) {
-        window.__thurianxAudio.pause();
-        window.__thurianxAudio.currentTime = 0;
-      }
     };
   }, [handleInteraction, showHint]);
 
@@ -64,7 +66,6 @@ function WelcomeScreen({ onStart, lang, setLang }) {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6 text-center space-y-6 relative overflow-hidden">
-      {/* Show hint only if showHint is true */}
       <AnimatePresence>
         {showHint && (
           <motion.div
@@ -156,6 +157,7 @@ function WelcomeScreen({ onStart, lang, setLang }) {
   );
 }
 
+
 function getResultStyle(index) {
   switch (index) {
     case 0:
@@ -210,8 +212,6 @@ function App() {
     CN: ['📷 拍照', '🔍 分析']
   };
 
-  
-  
   const handleUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -301,21 +301,19 @@ function App() {
             </button>
           </div>
 
-
-
           <AnimatePresence>
             {loading && (
               <motion.div
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  exit={{ opacity: 0 }}
-  className="flex flex-col items-center justify-center gap-3 py-4 text-center"
->
-  <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-  <p className="text-green-700 font-semibold text-sm">
-    ⏳ {lang === 'TH' ? 'AI กำลังวิเคราะห์ภาพ...' : lang === 'EN' ? 'AI analyzing...' : 'AI 正在分析...'}
-  </p>
-</motion.div>
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center gap-3 py-4 text-center"
+              >
+                <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-green-700 font-semibold text-sm">
+                  ⏳ {lang === 'TH' ? 'AI กำลังวิเคราะห์ภาพ...' : lang === 'EN' ? 'AI analyzing...' : 'AI 正在分析...'}
+                </p>
+              </motion.div>
             )}
             {result && !loading && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
