@@ -1,22 +1,29 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function WelcomeScreen({ onStart, lang, setLang }) {
-  useEffect(() => {
-    const handleInteraction = () => {
-      const audio = new Audio('/epic_ThurianX_app.mp3');
-      audio.volume = 0.5;
-      audio.play().catch((err) => {
-        console.warn('🎵 Cannot play audio:', err);
-      });
-      window.__thurianxAudio = audio;
-      document.removeEventListener('click', handleInteraction);
-      document.removeEventListener('touchstart', handleInteraction);
-    };
+  const [showHint, setShowHint] = useState(() => {
+    // use sessionStorage so it persists while tab is open
+    return sessionStorage.getItem('thurianx-hint-shown') !== 'false';
+  });
 
+  const handleInteraction = useCallback(() => {
+    const audio = new Audio('/epic_ThurianX_app.mp3');
+    audio.volume = 0.5;
+    audio.play().catch((err) => {
+      console.warn('🎵 Cannot play audio:', err);
+    });
+    window.__thurianxAudio = audio;
+    document.removeEventListener('click', handleInteraction);
+    document.removeEventListener('touchstart', handleInteraction);
+    setShowHint(false);
+    sessionStorage.setItem('thurianx-hint-shown', 'false');
+  }, []);
+
+  useEffect(() => {
+    if (!showHint) return;
     document.addEventListener('click', handleInteraction);
     document.addEventListener('touchstart', handleInteraction);
-
     return () => {
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
@@ -25,7 +32,7 @@ function WelcomeScreen({ onStart, lang, setLang }) {
         window.__thurianxAudio.currentTime = 0;
       }
     };
-  }, []);
+  }, [handleInteraction, showHint]);
 
   const handleStart = () => {
     onStart();
@@ -57,17 +64,21 @@ function WelcomeScreen({ onStart, lang, setLang }) {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6 text-center space-y-6 relative overflow-hidden">
-      {/* ข้อความเบาๆ ลอยๆ ชวนเปิดเสียง */}
-      <motion.div
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  exit={{ opacity: 0 }}
-  className="absolute top-4 right-4 text-sm text-gray-400 animate-pulse z-20"
->
-  {lang === 'TH' && 'แตะที่หน้าจอเพื่อเปิดเสียงดนตรี 🎵'}
-  {lang === 'EN' && 'Touch the screen to enable sound 🎵'}
-  {lang === 'CN' && '点击屏幕以开启音乐 🎵'}
-</motion.div>
+      {/* Show hint only if showHint is true */}
+      <AnimatePresence>
+        {showHint && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-4 right-4 text-sm text-gray-400 animate-pulse z-20"
+          >
+            {lang === 'TH' && 'แตะที่หน้าจอเพื่อเปิดเสียงดนตรี 🎵'}
+            {lang === 'EN' && 'Touch the screen to enable sound 🎵'}
+            {lang === 'CN' && '点击屏幕以开启音乐 🎵'}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
